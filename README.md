@@ -20,3 +20,6 @@ REFERENCES:
 This data and analysis can be better understood by reading some or all parts of the book:
 
 Sarmento, R., & Costa, V. (2017). Comparative Approaches to Using R and Python for Statistical Data Analysis (pp. 1-197). Hershey, PA: IGI Global. doi:10.4018/978-1-68318-016-6
+
+
+
