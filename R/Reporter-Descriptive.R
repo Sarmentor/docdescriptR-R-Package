@@ -3,6 +3,9 @@ library(nortest)
 library(flextable)
 library(broom)
 library(tictoc)
+library(magrittr) # needs to be run every time you start R and want to use %>%
+library(dplyr)
+library(plotrix)
 
 tictoc::tic("Global")
 # Inference Report
@@ -83,34 +86,39 @@ as.class <- FALSE
 
 #variables combinations
 data.vars.vector <- names(data)
-  
+
 #type of selected vars
-data.vars.vector <- data.vars.vector[which(class(data)==var.type)]
-  
-if (length(data.vars.vector) < 2){
-	warning(paste("Not enough variables of type", var.type, "to proceed with Inference Reporting. Suggestion: use var.type input equal to all", sep=" "))
-	return()
+if(var.type!="all"){
+	data.vars.vector <- data.vars.vector[which(class(data)==var.type)]
+
+	if (length(data.vars.vector) < 2){
+		warning(paste("Not enough variables of type", var.type, "to proceed with Inference Reporting. Suggestion: use var.type input equal to all", sep=" "))
+		return()
+	}
+
 }
   
 
 
-barPlot <- function(ip){
+barPlot <- function(ip,vars.name.pass){
   src1 <- tempfile(fileext = ".png")
   png(filename = src1, width = 5, height = 6, units = 'in', res = 300)
-  barplot(ip)
+  barplot(table(na.omit(ip)),col=1:10, cex.names = 0.70,cex.axis = 0.70,
+          main=paste("Bar Plot of",vars.name.pass, "Variable\n (with sample sizes)",sep=" "))
   dev.off()
   src1 <<- src1
 }
 
-boxPlot <- function(ip){
+boxPlot <- function(ip,vars.name.pass){
   src2 <- tempfile(fileext = ".png")
   png(filename = src2, width = 5, height = 6, units = 'in', res = 300)
   boxplot(ip)
+  title(paste("Box plot of",vars.name.pass,"variable",sep = " "))
   dev.off()
   src2 <<- src2
 }
 
-scatterPlot <- function(ip){
+scatterPlot <- function(ip,vars.name.pass){
   src3 <- tempfile(fileext = ".png")
   png(filename = src3, width = 5, height = 6, units = 'in', res = 300)
   scatter.smooth(ip)
@@ -118,118 +126,309 @@ scatterPlot <- function(ip){
   src3 <<- src3
 }
 
+piePlot <- function(ip,vars.name.pass){
+  src4 <- tempfile(fileext = ".png")
+  png(filename = src4, width = 5, height = 6, units = 'in', res = 300)
+  lbls <- paste(names(table(ip)), "\n", table(ip), sep="")
+  pie3D(table(ip), labels = lbls,explode=0.1,labelcex=0.8,
+        main=paste("Pie Chart of",vars.name.pass, "Variable\n (with sample sizes)",sep=" "))
+  dev.off()
+  src4 <<- src4
+}
 
 
-writing <- function(what="text",vars.name.pass=NULL,vars.val.pass=NULL,analysis=NULL){
+
+histPlot <- function(ip,vars.name.pass){
+  src0 <- tempfile(fileext = ".png")
+  png(filename = src0, width = 5, height = 6, units = 'in', res = 300)
+  my.breaks <- quantile(ip,seq(0,1,by=0.1),na.rm = TRUE)
+  labels = 1:(length(my.breaks)-1)
+  # hist(ip,breaks = "Sturges", probability=TRUE ,xlim = extendrange(my.breaks,r=range(my.breaks,na.rm=TRUE),f=0.05), ylim=extendrange(ip,r=range(ip,na.rm=TRUE),f=0.05),
+  #      col=c("green","darkgreen","blue","darkblue","purple","pink"),
+  #      main=paste("Histogram of",vars.name.pass,"variable",sep=" "))
+  hist(na.omit(ip),breaks = "Sturges", probability=FALSE ,
+       col=c("green","darkgreen","blue","darkblue","purple","pink"),
+       main=paste("Histogram of",vars.name.pass,"variable",sep=" "),xlab = paste(vars.name.pass))
+  dev.off()
+  src0 <<- src0
+}
+
+
+
+writing <- function(what="descriptive",vars.name.pass=NULL,vars.val.pass=NULL,analysis=NULL){
   
   
   
   
-  if(what=="text"){
+  if(what=="descriptive"){ 
+    
+    if(analysis=="header1"){
+      
+      val.header1 <<-  paste("Descriptive Analysis for All Variables:", sep = "")
+      body_add_par(my_doc, val.header1, style = "heading 1",pos = "after") 
+      body_add_par(my_doc, "", style = "Normal",pos="after") # blank paragraph
+      
+    }
+    
+    if(analysis=="header2"){
+      
+      val.header2 <<-  paste('Variable "', vars.name.pass, '" - This is the Descriptive Analysis:', sep = "")
+      body_add_par(my_doc, val.header2, style = "heading 2",pos="after") 
+      body_add_par(my_doc, "", style = "Normal",pos="after") # blank paragraph
+      
+    }
+    
+    if(analysis=="summ"){
+      
+      val.summ <- summary(na.omit(data[,vars.name.pass]))
+      
+      my.min <- as.numeric(val.summ["Min."])
+      my.max <- as.numeric(val.summ["Max."])
+      my.mean <- as.numeric(val.summ["Mean"])
+      my.median <- as.numeric(val.summ["Median"])
+      my.1stQu <- as.numeric(val.summ["1st Qu."])
+      my.3rdQu <- as.numeric(val.summ["3rd Qu."])
+      my.sd <- sd(na.omit(data[,vars.name.pass]))
+      
+      #output text with values for variable summary
+      val.summ.text <<- paste('"', vars.name.pass, '" variable varies between ',my.min ,' and ',my.max,'. The mean is ',round(my.mean,3),'. The standard deviation is ',round(my.sd,3),', that is, on average, the "',vars.name.pass,'" varies about ',round(my.sd,3),' of the mean.',' The first and third quartiles are ',my.1stQu,' and ',my.3rdQu,' respectively. This means that 50% (half) of elements of the sample have "', vars.name.pass,'" between ', my.1stQu,' and ',my.3rdQu,'.', sep="")
+      body_add_par(my_doc, val.summ.text, style = "Normal",pos="after") 
+      body_add_par(my_doc, "", style = "Normal",pos="after") # blank paragraph
+      
+    }
+    
+    if(analysis=="freqs"){
+      data[,vars.name.pass] <- as.factor(data[,vars.name.pass])
+      val.freqs <- as.numeric(freq <- table(na.omit(data[,vars.name.pass])))
+      
+      #browser()
+      #TODO
+      my.Abs.Freq <- val.freqs 
+      my.Rel.Freq <- as.numeric(prop.table(table(na.omit(data[,vars.name.pass])))[vars.name.pass])
+      my.CumAbs.Freq <- cumsum(val.freqs) 
+      my.CumRel.Freq <- cumsum(my.Rel.Freq)
+      
+      ncats <- length(unique(data[,vars.name.pass]))
+      
+      if(ncats > 10){
+        local.info.text <- paste('NOTE: Variable "',vars.name.pass,'"',' has more than 10 categories. Thus, it should be advised to divide this variable data in intervals or groups.\n','NONETHELESS, this software will continue with the analysis, at your own risk.', sep="")
+        #TODO - call shiny dialog windows with message, with only a OK button, no close possibility.
+      }
+      
+      val.freqs.text <- paste('Categorical variables are qualitative variables and cannot be represented by a number. Categorical variables could be nominal and ordinal categorical variables. The difference is that, regarding their presentation, while nominal variables may be presented randomly or in the preferred order of the analyst, the ordinal variables must be presented in the order that is more easily understood (lowest to high, for example). In case of categorical variables, the analysis that can be done is the frequency of each category.')
+      body_add_par(my_doc, val.freqs.text, style = "Normal",pos="after") 
+      body_add_par(my_doc, "", style = "Normal",pos="after") # blank paragraph
+      
+      for(cat in 1:ncats){
+        
+        #text with substitution of values for each category
+        val.freqs.text <- paste('Analyses show that there are ',val.freqs[cat],' counts of category "', levels(data[,vars.name.pass])[cat] ,'", corresponding to ',round(val.freqs[cat]/sum(val.freqs),3)*100,'%. In total, there are ', length(na.omit(data[,paste(vars.name.pass)])) ,' elements in the study.',sep="")
+        body_add_par(my_doc, val.freqs.text, style = "Normal",pos="after") 
+        body_add_par(my_doc, "", style = "Normal",pos="after") # blank paragraph
+        
+      }
+      
+      # obtem a tabela com frequencia das variaveis
+      # obtem o nome da variavel
+      name = names(freq)[freq == max(freq)]
+      
+      #se a contagem for igual para a variavel não faz
+      if(length(unique(table(data[,vars.name.pass])))>1){
+        
+        val.freqs.text <- paste('The mode (most common element) of this variable is ', name,', with ',max(freq),' counts.',sep="")
+        body_add_par(my_doc, val.freqs.text, style = "Normal",pos="after") 
+        body_add_par(my_doc, "", style = "Normal",pos="after") # blank paragraph
+        
+      }
+      
+   }
+    
+    if(analysis == "na"){
+      trigger <- is.na(data[,vars.name.pass])
+      
+      #if(any(trigger)){
+      val <- length(which(trigger==TRUE))
+      #}
+      
+      #output text with variable information about NA count
+      val.na.text <<-  paste(
+        "Results show that there are ", val,' missing values in variable "',vars.name.pass,'"',sep="")
+      body_add_par(my_doc, val.na.text, style = "Normal",pos="after") 
+      body_add_par(my_doc, "", style = "Normal",pos="after") # blank paragraph
+      
+    }
     
     if(analysis=="mean"){
-      TextInfomation1 <<-  paste(vars.name.pass, " mean is:", mean(data[,vars.name.pass]))
-      dyn.command <- paste(dyn.command,'body_add_par(TextInfomation1, style = "Normal") %>%') 
-      dyn.command <<- paste(dyn.command,'body_add_par("", style = "Normal") %>%') # blank paragraph
+      val.mean <<-  paste(vars.name.pass, " mean is:", mean(data[,vars.name.pass]),sep="")
+      body_add_par(my_doc, val.mean, style = "Normal",pos="after") 
+      body_add_par(my_doc, "", style = "Normal",pos="after") # blank paragraph
       
     }
     
     if(analysis=="sd"){
       
-      TextInfomation2 <<-  paste(vars.name.pass, " sd is:", sd(data[,vars.name.pass]))
-      dyn.command <- paste(dyn.command,'body_add_par(TextInfomation2, style = "Normal") %>%') 
-      dyn.command <<- paste(dyn.command,'body_add_par("", style = "Normal") %>%') # blank paragraph
+      val.sd <<-  paste(vars.name.pass, " sd (standard deviation) is:", sd(data[,vars.name.pass]))
+      body_add_par(my_doc, val.sd, style = "Normal",pos="after") 
+      body_add_par(my_doc, "", style = "Normal",pos="after") # blank paragraph
       
     }
     
     if(analysis=="median"){
       
-      TextInfomation3 <<-  paste(vars.name.pass, " median is:", median(data[,vars.name.pass]))
-      dyn.command <- paste(dyn.command,'body_add_par(TextInfomation3, style = "Normal") %>%') 
-      dyn.command <<- paste(dyn.command,'body_add_par("", style = "Normal") %>%') # blank paragraph
+      val.median <<-  paste(vars.name.pass, " median is:", median(data[,vars.name.pass]),sep="")
+      body_add_par(my_doc, val.median, style = "Normal",pos="after") 
+      body_add_par(my_doc, "", style = "Normal",pos="after") # blank paragraph
       
     }
     
   }
   
   if(what=="scatter"){
-    src3 <<- scatterPlot(data[,paste(vars.name.pass)])
-    dyn.command <<- paste(dyn.command,'body_add_par("Scatter Plot is: ", style = "Normal") %>%') # blank paragraph
-    dyn.command <<- paste(dyn.command,'body_add_img(src = src3, width = 5, height = 6, style = "centered") %>%')
-    dyn.command <<- paste(dyn.command,'body_add_par("", style = "Normal") %>%') # blank paragraph
+    val.scatter <<- scatterPlot(data[,paste(vars.name.pass)],vars.name.pass)
+    body_add_par(my_doc, "Scatter Plot is: ", style = "Normal",pos="after") # blank paragraph
+    body_add_img(my_doc, src = val.scatter, width = 5, height = 6, style = "centered",pos="after")
+    body_add_par(my_doc, "", style = "Normal",pos="after") # blank paragraph
   }
   
   if(what=="bar"){
-    src1 <<- barPlot(data[,paste(vars.name.pass)])
-    dyn.command <<- paste(dyn.command,'body_add_par("Bar Plot is: ", style = "Normal") %>%') # blank paragraph
-    dyn.command <<- paste(dyn.command,'body_add_img(src = src1, width = 5, height = 6, style = "centered") %>%')
-    dyn.command <<- paste(dyn.command,'body_add_par("", style = "Normal") %>%') # blank paragraph
+    val.bar <<- barPlot(data[,paste(vars.name.pass)],vars.name.pass)
+    body_add_par(my_doc, "Bar Plot is: ", style = "Normal",pos="after") # blank paragraph
+    
+    #to avoid dense bar plots
+    if(length(unique(data[,paste(vars.name.pass)]))<=30){
+      body_add_img(my_doc, src = val.bar, width = 5, height = 6, style = "centered",pos="after")
+      body_add_par(my_doc, "", style = "Normal",pos="after") # blank paragraph
+    }else{
+      body_add_par(my_doc, "Analysis not possible due to data constraints! (unique values > 30)", style = "Normal",pos="after") 
+      body_add_par(my_doc, "", style = "Normal",pos="after") # blank paragraph
+    }
+    
+  
   }
   
   if(what=="box"){
-    src2 <<- boxPlot(data[,paste(vars.name.pass)])
-    dyn.command <<- paste(dyn.command,'body_add_par("Box Plot is: ", style = "Normal") %>%') # blank paragraph
-    dyn.command <<- paste(dyn.command,'body_add_img(src = src2, width = 5, height = 6, style = "centered") %>%')
-    dyn.command <<- paste(dyn.command,'body_add_par("", style = "Normal") %>%') # blank paragraph
+    val.box <<- boxPlot(data[,paste(vars.name.pass)],vars.name.pass)
+    body_add_par(my_doc, "Box Plot is: ", style = "Normal",pos="after") # blank paragraph
+    body_add_img(my_doc, src = val.box, width = 5, height = 6, style = "centered",pos="after")
+    body_add_par(my_doc, "", style = "Normal",pos="after") # blank paragraph
+  }
+  
+  if(what=="pie"){
+    val.pie <<- piePlot(data[,paste(vars.name.pass)],vars.name.pass)
+    body_add_par(my_doc, "Pie Plot is: ", style = "Normal",pos="after") # blank paragraph
+   
+     #to avoid dense pie charts
+    if(length(unique(data[,paste(vars.name.pass)]))<=30){
+      body_add_img(my_doc, src = val.pie, width = 5, height = 6, style = "centered",pos="after")
+      body_add_par(my_doc, "", style = "Normal",pos="after") # blank paragraph
+    }else{
+      body_add_par(my_doc, "Analysis not possible due to data constraints! (unique values > 30)", style = "Normal",pos="after") 
+      body_add_par(my_doc, "", style = "Normal",pos="after") # blank paragraph
+    }
+  }
+  
+  if(what=="hist"){
+    if(class(data[,paste(vars.name.pass)])=="Date"){
+      return({0})
+    }else{
+      val.hist <<- histPlot(data[,paste(vars.name.pass)],vars.name.pass)
+      body_add_par(my_doc, "Histogram Plot is: ", style = "Normal",pos="after") # blank paragraph
+      body_add_img(my_doc, src = val.hist, width = 5, height = 6, style = "centered",pos="after")
+      body_add_par(my_doc, "", style = "Normal",pos="after") # blank paragraph
+    }
   }
   
   if(what=="table"){
-    TableToSave <<- head(data)
-    dyn.command <<- paste(dyn.command,'body_add_par("A short example of your data to analyze: ", style = "Normal") %>%') # blank paragraph
-    dyn.command <<- paste(dyn.command, 'body_add_table(TableToSave, style = "table_template") %>%') 
-    dyn.command <<- paste(dyn.command,'body_add_par("", style = "Normal") %>%') # blank paragraph
-  }
-  
-  
-}
-
-
-for(var in 1:(ncol(data)-1)){
-  
-  dyn.command <<- 'my_doc <- my_doc %>%'
-  
-  if(var ==1){
-    writing(what = "table",vars.name.pass = NULL,analysis = NULL)
-  }
-  
-  writing(what = "text",vars.name.pass = paste(names(data)[var]),analysis = "mean")
-  writing(what = "text",vars.name.pass = paste(names(data)[var]),analysis = "sd")
-  writing(what = "text",vars.name.pass = paste(names(data)[var]),analysis = "median")
-  writing(what = "bar",vars.name.pass = paste(names(data)[var]),analysis = NULL)
-  writing(what = "box",vars.name.pass = paste(names(data)[var]),analysis = NULL)
-  writing(what = "scatter",vars.name.pass = paste(names(data)[var]),analysis = NULL)
-  
-  dyn.command <<- noquote(stri_replace_last_fixed(dyn.command, " %>%", ""))
-  
-  #browser()
-  
-  eval(parse(text=dyn.command))
-  
-  print(my_doc, target = "Temp.docx")
-  
-}
-
-  
-   
-  tictoc::tic("Analysis")
     
-  save.image(file = paste(aux.file.rdata))
-  warning(Sys.time(),"Passed Descriptive\n\n")
-  tictoc::toc()
+    if(analysis=="head"){
+      #browser()
+      
+      new.column <- data.frame("..." = rep("...",nrow(data)), stringsAsFactors = TRUE)
+      new.table <<- as.data.frame(head(cbind(data[,1:ifelse(ncol(data<5),2,3)],new.column,data[,(ncol(data)-ifelse(ncol(data<5),1,3)):ncol(data)])))
+      
+      val.head <- flextable(new.table) %>% theme_booktabs() %>% fontsize() %>% autofit()
+      body_add_par(my_doc, "A short example of your data to analyze: ", style = "Normal",pos="after") # blank paragraph
+      body_add_par(my_doc, "", style = "Normal",pos="after") # blank paragraph
+      body_add_flextable(my_doc, val.head, pos="after",split = TRUE) 
+      body_add_par(my_doc, "", style = "Normal",pos="after") # blank paragraph
+    }
+    if(analysis=="freqs"){
+      val.freqs <<- flextable(Freq(data[,vars.name.pass]))
+      body_add_par(my_doc, "The table for frequencies is the following: ", style = "Normal",pos="after") # blank paragraph
+      body_add_flextable(my_doc, autofit(fontsize(val.freqs, size = 6, part = "all")), pos="after",split = TRUE) 
+      body_add_par(my_doc, "", style = "Normal",pos="after") # blank paragraph
+    }
+  }
+}
+
+tictoc::tic("Analysis")
+
+#Descriptive Analysis
+  if(as.class==TRUE){
+    nvars <- ncol(data)-1
+  }else{
+    nvars <- ncol(data)
+  }
+  
+  
+    for(var in 1:(nvars)){
+      
+      
+      if(var==1){
+        writing(what = "table",vars.name.pass = NULL,analysis = "head")
+        writing(what = "descriptive",vars.name.pass = paste(names(data)[var]),analysis = "header1")
+      }
+      
+      writing(what = "descriptive",vars.name.pass = paste(names(data)[var]),analysis = "header2")
+      #writing(what = "descriptive",vars.name.pass = paste(names(data)[var]),analysis = "mean")
+      #writing(what = "descriptive",vars.name.pass = paste(names(data)[var]),analysis = "sd")
+      #writing(what = "descriptive",vars.name.pass = paste(names(data)[var]),analysis = "median")
+      writing(what = "descriptive",vars.name.pass = paste(names(data)[var]),analysis = "na")
+      
+      if((class(data[,paste(names(data)[var])])=="character" || class(data[,paste(names(data)[var])])=="factor") && length(unique(data[,paste(names(data)[var])]))<30){
+        writing(what = "descriptive",vars.name.pass = paste(names(data)[var]),analysis = "freqs")
+        writing(what = "bar",vars.name.pass = paste(names(data)[var]),analysis = NULL)  
+        writing(what = "pie",vars.name.pass = paste(names(data)[var]),analysis = NULL)
+      }else if((class(data[,paste(names(data)[var])])!="character" && class(data[,paste(names(data)[var])])!="factor") && length(unique(data[,paste(names(data)[var])]))<=10){
+        writing(what = "descriptive",vars.name.pass = paste(names(data)[var]),analysis = "freqs")
+        writing(what = "bar",vars.name.pass = paste(names(data)[var]),analysis = NULL)  
+        writing(what = "pie",vars.name.pass = paste(names(data)[var]),analysis = NULL)
+      }else if((class(data[,paste(names(data)[var])])!="character" && class(data[,paste(names(data)[var])])!="factor") && length(unique(data[,paste(names(data)[var])]))>10){
+        writing(what = "descriptive",vars.name.pass = paste(names(data)[var]),analysis = "summ")
+        writing(what = "hist",vars.name.pass = paste(names(data)[var]),analysis = NULL)
+        #integer but categorical
+        x <<- na.omit(data[,var])
+        if(any(as.integer(x) != x)){
+          writing(what = "scatter",vars.name.pass = paste(names(data)[var]),analysis = NULL)
+          writing(what = "box",vars.name.pass = paste(names(data)[var]),analysis = NULL)
+        }
+      }else{
+        body_add_par(my_doc, "Analysis not possible due to data constraints!", style = "Normal",pos="after") 
+        body_add_par(my_doc, "", style = "Normal",pos="after") # blank paragraph
+      }  
+        
+       
+      }
+       
+  
+save.image(file = paste(aux.file.rdata))
+warning(Sys.time(),"Passed Descriptive\n\n")
+
+tictoc::toc()
 
 tictoc::tic("Writing DOC")
 print(my_doc, target = paste(aux.file.path))
 tictoc::toc()
 
-
+tictoc::tic("Writing RData")
 save.image(file = paste(aux.file.rdata))
-warning(Sys.time(),"Passed Final Print\n\n")
+warning(Sys.time(),"Passed Final Tasks. Closing\n\n")
 tictoc::toc()
 
 if(grepl("lin",tolower(my.OS))){
   close(aux.file.report)
 }
-warning("Passed Final Print")
+warning("Passed Final Close")
 
 sink(type = "message")
 sink()
