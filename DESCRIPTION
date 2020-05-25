@@ -16,7 +16,13 @@ Imports:
 	broom,
 	tictoc,
 	stats,
-	utils
+	utils,
+	DescTools,
+	magrittr,
+	dplyr,
+	grDevices,
+	graphics,
+	plotrix
 LinkingTo: 
 RcppModules: 
 SystemRequirements: 
