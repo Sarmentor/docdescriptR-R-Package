@@ -24,7 +24,7 @@ if(path == ""){
 	path <- file.choose(new = FALSE)
 }
 file_in <- file(path,"r")
-file_out <- file(paste(path,"-REPORT-DESCRIPTIVE-",var.type,".docx",sep = ""),open="wt", blocking = FALSE, encoding ="UTF-8")
+file_out <- file(paste(tempdir(),"docdescriptR-REPORT-DESCRIPTIVE-",var.type,"-",format(Sys.time(), "%a-%b-%d-%X-%Y"),".docx",sep = ""),open="wt", blocking = FALSE, encoding ="UTF-8")
 
 #defining the document name
 if(grepl("linux",tolower(my.OS))){
@@ -441,15 +441,16 @@ sink()
 #' @param path (Optional) A character vector with the path to data file. If empty character string (""), interface will appear to choose file. 
 #' @param var.type (Optional) The type of variables to perform analysis, with possible values: "all", "numeric", "integer", "double", "factor", "character". 
 #' @return The output
-#'   will be a document in the same folder of the data file.
+#'   will be a document in the temp folder (tempdir()).
 #' @examples
-#' \dontrun{
+#' \donttest{
 #' data(iris)
 #' write.csv(iris,file="iriscsvfile.csv")
 #' docdescriptR(path="iriscsvfile.csv")
 #' }
 #' @references
 #' \insertAllCited{}
+#' @export
 docdescriptR <- function(path="", var.type="all"){
 	main(path,var.type=var.type)
 }
