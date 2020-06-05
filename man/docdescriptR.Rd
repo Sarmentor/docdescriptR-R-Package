@@ -11,4 +11,5 @@
 \author{Rui Portocarrero Sarmento, Vera Costa}
 \examples{\dontrun{docdescriptR(path="data.csv",var.type="numeric")}}
 \keyword{Descriptive Analysis}
+\insertRef{sarmento2017comparative}{docdescriptR}
 

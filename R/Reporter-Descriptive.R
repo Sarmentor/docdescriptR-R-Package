@@ -449,7 +449,7 @@ sink()
 #' docdescriptR(path="iriscsvfile.csv")
 #' }
 #' @references
-#' \insertAllCited{}
+#' 	\insertAllCited{}
 #' @export
 docdescriptR <- function(path="", var.type="all"){
 	main(path,var.type=var.type)
