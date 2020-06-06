@@ -1,6 +1,6 @@
 Package: docdescriptR
 Type: Package
-Title: Automatic reporter for descriptive analysis
+Title: Automatic Reporter for Descriptive Analysis
 Version: 2020.1.0
 Author: Rui Portocarrero Sarmento, Vera Costa
 Maintainer: Rui P. Sarmento <email@ruisarmento.com>
@@ -22,8 +22,10 @@ Imports:
 	dplyr,
 	grDevices,
 	graphics,
-	plotrix
+	plotrix,
+	Rdpack
 LinkingTo: 
 RcppModules: 
 SystemRequirements: 
 RoxygenNote: 7.1.0
+RdMacros: Rdpack
