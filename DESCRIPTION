@@ -22,7 +22,9 @@ Imports:
 	dplyr,
 	grDevices,
 	graphics,
-	plotrix
+	plotrix,
+	Rdpack
+RdMacros: Rdpack
 LinkingTo: 
 RcppModules: 
 SystemRequirements: 
