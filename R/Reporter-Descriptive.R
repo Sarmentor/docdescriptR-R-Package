@@ -444,6 +444,7 @@ sink()
 #'   will be a document in the temp folder (tempdir()).
 #' @examples
 #' \donttest{
+#' library(docdescriptR)
 #' data(iris)
 #' write.csv(iris,file="iriscsvfile.csv")
 #' docdescriptR(path="iriscsvfile.csv")
