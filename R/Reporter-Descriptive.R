@@ -446,8 +446,9 @@ sink()
 #' \donttest{
 #' library(docdescriptR)
 #' data(iris)
-#' write.csv(iris,file="iriscsvfile.csv")
-#' docdescriptR(path="iriscsvfile.csv")
+#' dir = tempdir()
+#' write.csv(iris,file=paste(dir,"iriscsvfile.csv",sep=""))
+#' docdescriptR(path=paste(dir,"iriscsvfile.csv",sep=""))
 #' }
 #' @references
 #' 	\insertAllCited{}
